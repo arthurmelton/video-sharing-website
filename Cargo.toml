@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 html-minifier = "3.0.14"
+rand = "0.8.4"
