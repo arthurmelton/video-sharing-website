@@ -49,6 +49,19 @@ function upload(sections, int) {
         })
     }
     else {
-        $.post("upload", "done");
+        $.get("upload", "done", function(data){
+            $("#video_link").attr("href", data);
+            $("#done").attr("style", "");
+        });
     }
+}
+
+function change_dark_mode() {
+    if (localStorage.getItem("DarkMode") == "true") {
+        localStorage.setItem("DarkMode", "false");
+    }
+    else {
+        localStorage.setItem("DarkMode", "true");
+    }
+    update_dark_mode();
 }

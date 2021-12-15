@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video $video_id</title>
+    <link href="style.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#283548] dark:to-slate-800 w-screen h-screen">
+    <script src="main.js"></script>
+    <div class="absolute shadow-lg left-[2.5%] w-[95%] top-[2.5%] h-[95%] rounded-lg dark:bg-slate-800 bg-slate-50 dark:text-slate-500 dark:shadow-slate-800">
+        <div class="w-full h-[10%] text-center text-7xl">
+            $video_id
+        </div>
+        <video src="./videos/$video_id" class="w-full h-[90%] object-contain overflow-hidden rounded-b-lg" controls="controls"></video>
+    </div>
+</body>
+</html>
