@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="Video Share">
+    <meta property="twitter:title" content="Video Share">
+    <meta property="og:description" content="This is an open-source video sharing platform, the code is at https://github.com/AMTitan/video-sharing-website">
+    <meta property="twitter:description" content="This is an open-source video sharing platform, the code is at https://github.com/AMTitan/video-sharing-website">
+    <meta name="keywords" content="video, free, video share, anonymous">
     <title>Video Share</title>
     <link href="style.css" type="text/css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -12,7 +17,7 @@
     <script src="main.js"></script>
     <div class="fixed rounded-xl w-[95%] dark:bg-slate-800 dark:shadow-slate-800 bg-slate-50 min-h-[50px] h-[5%] top-[10px] left-[2.5%] grid gap-4 grid-cols-12 grid-rows-1 items-center text-center z-20 shadow-2xl">
         <div>
-            hi
+            <img src="favicon.ico" alt="Icon" class="w-[24px] h-[24px] object-contain overflow-hidden m-auto">
         </div>
         <div>
             hi
@@ -49,14 +54,19 @@
         </div>
     </div>
     <div class="absolute w-screen h-screen bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#283548] dark:to-slate-800 top-0 -z-10"></div>
-    <div class="absolute rounded-xl w-4/6 dark:bg-slate-800 bg-slate-50 h-4/6 top-[16.666667%] left-[16.666667%] shadow-lg text-center">
+    <div class="absolute rounded-xl w-4/6 dark:bg-slate-800 bg-slate-50 h-4/6 top-[16.666667%] left-[16.666667%] shadow-lg text-center overflow-y-auto">
+        <input id="fileInput" type="file" name="file" accept="video/*" class="inputfile"/>
         <div class="text-5xl">Video Share</div>
         <hr class="absolute w-1/4 left-[37.5%]">
         <div class="absolute mt-4 w-3/4 left-[12.5%]">
             This is an open source video sharing website, you don't need an account! I really need a lot more filler to make this look professional
-            <input id="fileInput" type="file" name="file" accept="video/*" class="mt-10"/>
+            <br>
+            <label id="file" for="fileInput" class="absolute mt-7 text-blue-500 w-[100%] left-0 cursor-pointer">Choose a file</label>
+            <div id="uploading" class="mt-7" style="display: none;">
+                Uploading your video please wait!
+            </div>
             <div id="done" class="mt-7" style="display: none;">
-                <a href="" class="text-blue-500" id="video_link">Here is your video</a>
+                <a href="" class="text-blue-500 cursor-pointer" id="video_link">Here is your video</a>
             </div>
         </div>
     </div>

@@ -26,34 +26,24 @@ function init() {
 }
   
 function handleFileSelect(event) {
-    const reader = new FileReader()
-    reader.onload = handleFileLoad;
-    reader.readAsText(event.target.files[0])
+    document.getElementById('file').style = "display:none";
+    document.getElementById('uploading').style = "";
+    let reader = new FileReader();
+    reader.readAsText(document.getElementById('fileInput').files[0]);
+    reader.onload = function() {
+        console.log(reader.result);
+        upload(reader.result);
+      };
 }
 
-function handleFileLoad(event) {
-    document.getElementById('fileInput').style = "display:none";
-    var sections = event.target.result.match(/[\s\S]{1,45000}/g)
-    upload(sections, 0);
-}
-
-function upload(sections, int) {
-    if (int<sections.length) {
-        const promise1 = new Promise((resolve) => {
-            $.post("upload", sections[int], function(status) {
-                resolve();
-            })
-        })
-        promise1.then(() => {
-            upload(sections, int+=1);
-        })
-    }
-    else {
+function upload(uploads) {
+    $.post("upload", uploads + "\r\n\r\n", function(status) {
         $.get("upload", "done", function(data){
             $("#video_link").attr("href", data);
             $("#done").attr("style", "");
+            document.getElementById('uploading').style = "display:none";
         });
-    }
+    })
 }
 
 function change_dark_mode() {
