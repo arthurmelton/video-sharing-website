@@ -106,7 +106,7 @@ fn if_contains(request:Vec<u8>, start:usize) -> bool {
     let mut index = start;
     let mut post = 0;
 
-    while index != request.len() {
+    while index < request.len() {
         if index == 4 && &[one, two, three, four] == b"POST" {
             post = 1;
         }

@@ -31,20 +31,42 @@ function handleFileSelect(event) {
     let reader = new FileReader();
     reader.readAsText(document.getElementById('fileInput').files[0]);
     reader.onload = function() {
-        console.log(reader.result);
         upload(reader.result);
       };
 }
 
 function upload(uploads) {
-    $.post("upload", uploads + "\r\n\r\n", function(status) {
-        $.get("upload", "done", function(data){
-            $("#video_link").attr("href", data);
-            $("#done").attr("style", "");
-            document.getElementById('uploading').style = "display:none";
-        });
-    })
+    console.log(uploads.length);
+    $.ajax({
+        type:"POST",
+        url:"upload",
+        data: uploads + "\r\n\r\n",
+        xhr: function () {
+            var myXhr = $.ajaxSettings.xhr();
+            if (myXhr.upload) {
+                myXhr.upload.addEventListener('progress', progressHandling, false);
+            }
+            return myXhr;
+        },
+        success: function(data){
+            $.get("upload", "done", function(data){
+                $("#video_link").attr("href", data);
+                $("#done").attr("style", "");
+                document.getElementById('uploading').style = "display:none";
+            });
+        }
+    });
 }
+
+function progressHandling(event) {
+    var percent = 0;
+    var position = event.loaded || event.position;
+    var total = event.total;
+    if (event.lengthComputable) {
+        percent = Math.round(position / total * 100);
+    }
+    $("#uploading").text("Uploading your video please wait! ("+percent+"%)");
+};
 
 function change_dark_mode() {
     if (localStorage.getItem("DarkMode") == "true") {
