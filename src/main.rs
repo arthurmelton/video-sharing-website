@@ -12,13 +12,20 @@ fn main() {
             let mut stream = stream.unwrap();
             let mut request:Vec<u8> = Vec::new();
             let mut buf = [0; 4096];
-            let mut start = 0;
-            while !if_contains(request.clone(), start) {
+            let mut start;
+            let mut total = 0;
+            let mut continues = true;
+            while continues {
                 start = request.len();
                 let len = stream.read(&mut buf).unwrap();
                 request.extend_from_slice(&buf[..len]);
+                let returns = if_contains(request.clone(), start, total);
+                continues = !returns.0;
+                total = returns.1;
             }
             let response:String = String::from_utf8_lossy(&request).to_string();
+            println!("{}", response.len());
+            let response = response[..response.len()-63].to_string();
             if response.split(' ').count() > 1 {
                 let wants = response.split(' ').nth(1).unwrap();
                 if wants.starts_with("/upload") {
@@ -40,7 +47,7 @@ fn main() {
                     }
                     else {
                         let mut f = OpenOptions::new().write(true).append(true).create(true).open(format!("./videos/{}", stream.peer_addr().unwrap().to_string().split(":").next().unwrap())).unwrap();
-                        f.write_all(response.split("\r\n\r\n").nth(1).unwrap().as_bytes()).expect("write failed");
+                        f.write_all(response.split("\r\n\r\n").nth(2).unwrap().as_bytes()).expect("write failed");
                         stream.write_all("HTTP/1.1 200 Ok\r\n\r\n".as_bytes()).unwrap();
                         stream.flush().unwrap();
                     }
@@ -98,14 +105,13 @@ fn main() {
     }
 }
 
-fn if_contains(request:Vec<u8>, start:usize) -> bool {
+fn if_contains(request:Vec<u8>, start:usize, total:usize) -> (bool, usize) {
     let mut one = 0;
     let mut two = 0;
     let mut three = 0;
     let mut four = 0;
     let mut index = start;
-    let mut post = 0;
-
+    let mut post = total;
     while index < request.len() {
         if index == 4 && &[one, two, three, four] == b"POST" {
             post = 1;
@@ -115,12 +121,12 @@ fn if_contains(request:Vec<u8>, start:usize) -> bool {
         three = four;
         four = request[index];
         index+=1;
-        if &[one, two, three, four] == b"\r\n\r\n" && (post == 2 || post == 0) {
-            return true;
+        if (&[one, two, three, four] == b"\r\n\r\n" && post == 0) || (post == 60 && &[one, two, three, four] == b"----") {
+            return (true, post);
         }
-        else if &[one, two, three, four] == b"\r\n\r\n" && post == 1 {
-            post = 2;
+        else if &[one, two, three, four] == b"\r\n\r\n" || (post > 0 && &[one, two, three, four] == b"----") {
+            post += 1;
         }
     }
-    return false;
+    return (false, post);
 }

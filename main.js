@@ -28,34 +28,23 @@ function init() {
 function handleFileSelect(event) {
     document.getElementById('file').style = "display:none";
     document.getElementById('uploading').style = "";
-    let reader = new FileReader();
-    reader.readAsText(document.getElementById('fileInput').files[0]);
-    reader.onload = function() {
-        upload(reader.result);
-      };
+    upload(document.getElementById('fileInput').files[0]);
 }
 
 function upload(uploads) {
-    console.log(uploads.length);
-    $.ajax({
-        type:"POST",
-        url:"upload",
-        data: uploads + "\r\n\r\n",
-        xhr: function () {
-            var myXhr = $.ajaxSettings.xhr();
-            if (myXhr.upload) {
-                myXhr.upload.addEventListener('progress', progressHandling, false);
-            }
-            return myXhr;
-        },
-        success: function(data){
-            $.get("upload", "done", function(data){
-                $("#video_link").attr("href", data);
-                $("#done").attr("style", "");
-                document.getElementById('uploading').style = "display:none";
-            });
-        }
+    let formData = new FormData();
+    formData.append("video", uploads);
+    let request = new XMLHttpRequest();
+    request.open('POST', '/upload');
+    request.upload.addEventListener('progress', progressHandling, false);
+    request.addEventListener('load', function(e) {
+        $.get("upload", "done", function(data){
+            $("#video_link").attr("href", data);
+            $("#done").attr("style", "");
+            document.getElementById('uploading').style = "display:none";
+        });
     });
+    request.send(formData);
 }
 
 function progressHandling(event) {
