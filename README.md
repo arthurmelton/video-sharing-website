@@ -1,5 +1,10 @@
 # video-sharing-website
 
+## Dependency
+
+- Git
+- Rust
+
 ## Run
 
 ```sh
