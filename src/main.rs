@@ -7,6 +7,7 @@ use std::io::{Read, Write};
 
 fn main() {
     let listener = TcpListener::bind("0.0.0.0:9377").unwrap();
+    fs::create_dir_all("videos").unwrap();
     for stream in listener.incoming() {
         thread::spawn(move || {
             let mut stream = stream.unwrap();
@@ -40,7 +41,6 @@ fn main() {
                 total = returns.1;
             }
             let response:String = String::from_utf8_lossy(&request).to_string();
-            println!("{}", request.len());
             if response.starts_with("POST") {
                 for _ in 0..response.split("\n").nth(response.split("\n").count()-2).unwrap().len()+3 {
                     request.pop();
