@@ -15,17 +15,55 @@ fn main() {
             let mut start;
             let mut total = 0;
             let mut continues = true;
+            let mut looks_for = "".to_string();
             while continues {
-                start = request.len();
+                if request.len() > 31 {
+                    start = request.len()-31;
+                }
+                else {
+                    start = request.len(); 
+                }
                 let len = stream.read(&mut buf).unwrap();
                 request.extend_from_slice(&buf[..len]);
-                let returns = if_contains(request.clone(), start, total);
+                if start == 0 {
+                    for i in String::from_utf8_lossy(&buf).to_string().lines() {
+                        if i.starts_with("Content-Type") {
+                            match i.split("boundary=").nth(1) {
+                                Some(x) => {looks_for = format!("{}", x[25..].to_string())},
+                                None => {}
+                            }
+                        }
+                    }
+                }
+                let returns = if_contains(request.clone(), start, total, looks_for.clone());
                 continues = !returns.0;
                 total = returns.1;
             }
             let response:String = String::from_utf8_lossy(&request).to_string();
-            println!("{}", response.len());
-            let response = response[..response.len()-63].to_string();
+            println!("{}", request.len());
+            if response.starts_with("POST") {
+                for _ in 0..response.split("\n").nth(response.split("\n").count()-2).unwrap().len()+3 {
+                    request.pop();
+                }
+                for _ in 0..response.split("Content-Type: ").next().unwrap().len()+14+response.split("Content-Type: ").nth(1).unwrap().len() {
+                    request.remove(0);
+                }
+                let mut index = 0;
+                let mut second = false;
+                loop {
+                    let i = response.lines().nth(index).unwrap();
+                    if i.starts_with("Content-Type: ") {
+                        if second == true {
+                            for _ in 0..i.len()+4 {
+                                request.remove(0);
+                            }
+                            break;
+                        }
+                        second=!second;
+                    }
+                    index+=1;
+                }
+            }
             if response.split(' ').count() > 1 {
                 let wants = response.split(' ').nth(1).unwrap();
                 if wants.starts_with("/upload") {
@@ -46,8 +84,9 @@ fn main() {
                         stream.flush().unwrap();
                     }
                     else {
+                        
                         let mut f = OpenOptions::new().write(true).append(true).create(true).open(format!("./videos/{}", stream.peer_addr().unwrap().to_string().split(":").next().unwrap())).unwrap();
-                        f.write_all(response.split("\r\n\r\n").nth(2).unwrap().as_bytes()).expect("write failed");
+                        f.write_all(&request).expect("write failed");
                         stream.write_all("HTTP/1.1 200 Ok\r\n\r\n".as_bytes()).unwrap();
                         stream.flush().unwrap();
                     }
@@ -105,26 +144,28 @@ fn main() {
     }
 }
 
-fn if_contains(request:Vec<u8>, start:usize, total:usize) -> (bool, usize) {
-    let mut one = 0;
-    let mut two = 0;
-    let mut three = 0;
-    let mut four = 0;
+fn if_contains(request:Vec<u8>, start:usize, total:usize, looks_for:String) -> (bool, usize) {
     let mut index = start;
     let mut post = total;
+    let mut length = looks_for.len();
+    if looks_for.len() < 3 {
+        length = 4;
+    }
+    let mut looks = vec![0;length];
     while index < request.len() {
-        if index == 4 && &[one, two, three, four] == b"POST" {
+        if index == 5 && &[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"POST" {
             post = 1;
         }
-        one = two;
-        two = three;
-        three = four;
-        four = request[index];
+        for i in 0..length {
+            if index >= length-i {
+                looks[i]=request[index-(length-i)];
+            }
+        }
         index+=1;
-        if (&[one, two, three, four] == b"\r\n\r\n" && post == 0) || (post == 60 && &[one, two, three, four] == b"----") {
+        if (&[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"Host" && post == 0) || (post == 4 && &looks == looks_for.as_bytes()) {
             return (true, post);
         }
-        else if &[one, two, three, four] == b"\r\n\r\n" || (post > 0 && &[one, two, three, four] == b"----") {
+        else if &[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"Host" || (post > 0 && &looks == looks_for.as_bytes()) {
             post += 1;
         }
     }
