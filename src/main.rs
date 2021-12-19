@@ -30,7 +30,7 @@ fn main() {
                     for i in String::from_utf8_lossy(&buf).to_string().lines() {
                         if i.starts_with("Content-Type") {
                             match i.split("boundary=").nth(1) {
-                                Some(x) => {looks_for = format!("{}", x[25..].to_string())},
+                                Some(x) => {looks_for = format!("{}", x[25..].to_string()).trim().to_string()},
                                 None => {}
                             }
                         }
@@ -84,12 +84,17 @@ fn main() {
                         stream.flush().unwrap();
                     }
                     else {
-                        
+                        println!("{}", stream.peer_addr().unwrap().to_string().split(":").next().unwrap());
                         let mut f = OpenOptions::new().write(true).append(true).create(true).open(format!("./videos/{}", stream.peer_addr().unwrap().to_string().split(":").next().unwrap())).unwrap();
                         f.write_all(&request).expect("write failed");
                         stream.write_all("HTTP/1.1 200 Ok\r\n\r\n".as_bytes()).unwrap();
                         stream.flush().unwrap();
                     }
+                }
+                else if wants.starts_with("/delete") {
+                    fs::remove_file(format!("./videos/{}", wants[8..].to_string())).unwrap();
+                    stream.write_all("HTTP/1.1 200 Ok\r\n\r\n".as_bytes()).unwrap();
+                    stream.flush().unwrap();
                 }
                 else {
                     let file_wants = match wants {
@@ -162,7 +167,7 @@ fn if_contains(request:Vec<u8>, start:usize, total:usize, looks_for:String) -> (
             }
         }
         index+=1;
-        if (&[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"Host" && post == 0) || (post == 4 && &looks == looks_for.as_bytes()) {
+        if (&[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"Host" && post == 0) || (post > 1 && index > 4096 && &looks == looks_for.as_bytes()) {
             return (true, post);
         }
         else if &[looks[length-4], looks[length-3], looks[length-2], looks[length-1]] == b"Host" || (post > 0 && &looks == looks_for.as_bytes()) {

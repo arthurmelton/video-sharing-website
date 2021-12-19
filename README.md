@@ -12,7 +12,7 @@ cargo run --release
 
 If you want to edit how the website looks you can just change the `.html` pages.
 
-404.html   - 404 page  
+404.html - 404 page  
 index.html - home/landing page  
 video.html - video page  
 

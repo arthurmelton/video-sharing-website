@@ -39,9 +39,7 @@ function upload(uploads) {
     request.upload.addEventListener('progress', progressHandling, false);
     request.addEventListener('load', function(e) {
         $.get("upload", "done", function(data){
-            $("#video_link").attr("href", data);
-            $("#done").attr("style", "");
-            document.getElementById('uploading').style = "display:none";
+            window.location.href = data;
         });
     });
     request.send(formData);
