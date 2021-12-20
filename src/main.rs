@@ -6,7 +6,7 @@ use std::thread;
 use std::io::{Read, Write};
 
 fn main() {
-    let listener = TcpListener::bind("0.0.0.0:9377").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:80").unwrap();
     fs::create_dir_all("videos").unwrap();
     for stream in listener.incoming() {
         thread::spawn(move || {
