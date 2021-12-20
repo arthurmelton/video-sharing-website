@@ -17,6 +17,7 @@ fn main() {
             let mut total = 0;
             let mut continues = true;
             let mut looks_for = "".to_string();
+            let mut host = "".to_string();
             while continues {
                 if request.len() > 31 {
                     start = request.len()-31;
@@ -33,6 +34,9 @@ fn main() {
                                 Some(x) => {looks_for = format!("{}", x[25..].to_string()).trim().to_string()},
                                 None => {}
                             }
+                        }
+                        else if i.starts_with("Host: ") {
+                            host = i[6..].to_string();
                         }
                     }
                 }
@@ -139,7 +143,7 @@ fn main() {
                     }
                     f.read_to_end(&mut buffer).expect("buffer overflow");
                     if file_wants == "video.html" {
-                        buffer = String::from_utf8(buffer).unwrap().replace("$video_id", &wants[1..]).as_bytes().to_vec();
+                        buffer = String::from_utf8(buffer).unwrap().replace("$video_id", &wants[1..]).replace("$host", &host).as_bytes().to_vec();
                     }
                     stream.write(&buffer).unwrap();
                     stream.flush().unwrap();

@@ -23,6 +23,8 @@ video.html - video page
 
 With the video page where ever it says `$video_id` it will replace it with the id of the video the user wants to see ex. `BKyV9jL99S`
 
+Also just know that if you change any of the html files while the program is running it will change for everyone instantly.
+
 ## Support
 
 Monero: `44grzUFdoWaHQAAquuyqR5J8TBqkZ2pNserAcR2hxA5NQYu9E2Tmt9wdbKBQso3C8RPGJUaEKeBbWCEGThQNQ4j6Aw2FXKJ`
