@@ -13,6 +13,13 @@ cd video-charing-website
 cargo run --release
 ```
 
+if it says os message you will have to run
+
+```sh
+cargo build --release
+```
+then as root or as administrator you will want to run `.//target//release//vidoe-sharing-website`
+
 ## Edit
 
 If you want to edit how the website looks you can just change the `.html` pages.
