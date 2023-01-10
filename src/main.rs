@@ -1,7 +1,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::response::stream::ReaderStream;
-use crate::rocket::tokio::io::AsyncWriteExt;
+use crate::rocket::tokio::io::{AsyncWriteExt, AsyncReadExt};
 use rocket::tokio::fs::File;
 use std::fs;
 use rocket::fs::{NamedFile, relative};
@@ -11,6 +11,7 @@ use rocket::form::Form;
 use rocket::http::ContentType;
 use rocket_multipart_form_data::{mime, MultipartFormDataOptions, MultipartFormData, MultipartFormDataField, Repetition};
 use rocket::Data;
+use rocket_seek_stream::SeekStream;
 
 const CHARS: &[char] = &[
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
@@ -20,23 +21,30 @@ const CHARS: &[char] = &[
     '4', '5', '6', '7', '8', '9',
 ];
 
+#[get("/video/<path>")]
+async fn video(path: &str) -> Option<(ContentType, String)> {
+    let mut file = File::open("./www/video.html").await.ok()?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).await.ok()?;
+    Some((ContentType::HTML, contents.replace("$video_id", path)))
+}
+
 #[get("/videos/<path>")]
-async fn video(path: &str) -> std::io::Result<(ContentType, ReaderStream![File])> {
-    let file = File::open(format!("./videos/{}", path)).await?;
-    Ok((ContentType::MP4, ReaderStream::one(file)))
+async fn videos<'a>(path: &str) -> std::io::Result<(ContentType, std::io::Result<SeekStream<'a>>)> {
+    Ok((ContentType::Binary, SeekStream::from_path(format!("./videos/{}", path))))
 }
 
 #[post("/upload", data = "<video>")]
-async fn write_video(content_type: &ContentType, video: Data<'_>) -> Option<()> {
-    let mut options = MultipartFormDataOptions::with_multipart_form_data_fields(
+async fn write_video(content_type: &ContentType, video: Data<'_>) -> Option<String> {
+    let options = MultipartFormDataOptions::with_multipart_form_data_fields(
         vec! [
-            MultipartFormDataField::file("video").content_type_by_string(Some(mime::VIDEO)).unwrap(),
+            MultipartFormDataField::raw("video").size_limit(536870912),
         ]
     );
-    let mut multipart_form_data = MultipartFormData::parse(content_type, video, options).await.unwrap();
+    let multipart_form_data = MultipartFormData::parse(content_type, video, options).await.unwrap();
     let mut name = String::new();
     let mut first = true;
-    while !Path::new(&name).exists() || first {
+    while Path::new(&name).exists() || first {
         name = "./videos/".to_string();
         for _x in 0..10 {
             name.push_str(
@@ -49,14 +57,14 @@ async fn write_video(content_type: &ContentType, video: Data<'_>) -> Option<()> 
         }
         first = false;
     }
-    let mut file = File::create(name).await.ok()?;
-    file.write_all(&multipart_form_data.files.get("video")?).await.ok()?;
-    Some(())
+    let mut file = File::create(name.clone()).await.ok()?;
+    file.write_all(&multipart_form_data.raw.get("video")?[0].raw).await.ok()?;
+    Some(name[9..].to_string())
 }
 
-#[delete("/delete/<path>")]
-async fn del_video(path: &str) -> Option<()> {
-    fs::remove_file(format!("./videos/{}", path)).ok()?;
+#[delete("/delete?<id>")]
+async fn del_video(id: &str) -> Option<()> {
+    fs::remove_file(format!("./videos/{}", id)).ok()?;
     Some(())
 }
 
@@ -76,7 +84,7 @@ async fn _static(mut path: PathBuf) -> Option<rocket::fs::NamedFile> {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![video, del_video, _static, write_video])
+    rocket::build().mount("/", routes![video, videos, del_video, _static, write_video])
 }
 
 /*
