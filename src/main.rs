@@ -13,6 +13,7 @@ use rocket_multipart_form_data::{
 use rocket_seek_stream::SeekStream;
 use std::fs;
 use std::path::{Path, PathBuf};
+use rocket::http::uri::Host;
 
 const CHARS: &[char] = &[
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -22,12 +23,12 @@ const CHARS: &[char] = &[
 ];
 
 #[get("/video/<path>")]
-async fn video(path: &str) -> Option<(ContentType, String)> {
+async fn video(path: &str, host: &Host<'_>) -> Option<(ContentType, String)> {
     File::open(format!("./videos/{}", path)).await.ok()?;
     let mut file = File::open("./www/video.html").await.ok()?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).await.ok()?;
-    Some((ContentType::HTML, contents.replace("$video_id", path)))
+    Some((ContentType::HTML, contents.replace("$video_id", path).replace("$host", &host.domain().to_string())))
 }
 
 #[get("/videos/<path>")]
