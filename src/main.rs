@@ -1,10 +1,85 @@
-use rand::prelude::SliceRandom;
-use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
-use std::net::TcpListener;
-use std::path::Path;
-use std::thread;
+#[macro_use] extern crate rocket;
 
+use rocket::response::stream::ReaderStream;
+use crate::rocket::tokio::io::AsyncWriteExt;
+use rocket::tokio::fs::File;
+use std::fs;
+use rocket::fs::{NamedFile, relative};
+use std::path::{PathBuf, Path};
+use rand::prelude::SliceRandom;
+use rocket::form::Form;
+use rocket::http::ContentType;
+use rocket_multipart_form_data::{mime, MultipartFormDataOptions, MultipartFormData, MultipartFormDataField, Repetition};
+use rocket::Data;
+
+const CHARS: &[char] = &[
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B',
+    'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9',
+];
+
+#[get("/videos/<path>")]
+async fn video(path: &str) -> std::io::Result<(ContentType, ReaderStream![File])> {
+    let file = File::open(format!("./videos/{}", path)).await?;
+    Ok((ContentType::MP4, ReaderStream::one(file)))
+}
+
+#[post("/upload", data = "<video>")]
+async fn write_video(content_type: &ContentType, video: Data<'_>) -> Option<()> {
+    let mut options = MultipartFormDataOptions::with_multipart_form_data_fields(
+        vec! [
+            MultipartFormDataField::file("video").content_type_by_string(Some(mime::VIDEO)).unwrap(),
+        ]
+    );
+    let mut multipart_form_data = MultipartFormData::parse(content_type, video, options).await.unwrap();
+    let mut name = String::new();
+    let mut first = true;
+    while !Path::new(&name).exists() || first {
+        name = "./videos/".to_string();
+        for _x in 0..10 {
+            name.push_str(
+                CHARS
+                    .choose(&mut rand::thread_rng())
+                    .unwrap()
+                    .to_string()
+                    .as_str(),
+            );
+        }
+        first = false;
+    }
+    let mut file = File::create(name).await.ok()?;
+    file.write_all(&multipart_form_data.files.get("video")?).await.ok()?;
+    Some(())
+}
+
+#[delete("/delete/<path>")]
+async fn del_video(path: &str) -> Option<()> {
+    fs::remove_file(format!("./videos/{}", path)).ok()?;
+    Some(())
+}
+
+#[catch(404)]
+async fn not_found() -> Option<NamedFile> {
+    NamedFile::open("./www/404.html").await.ok()
+}
+
+#[get("/<path..>")]
+async fn _static(mut path: PathBuf) -> Option<rocket::fs::NamedFile> {
+    if path == PathBuf::new() {
+        path = PathBuf::from("index.html");
+    }
+    let path = Path::new(relative!("www")).join(path);
+    rocket::fs::NamedFile::open(path).await.ok()
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![video, del_video, _static, write_video])
+}
+
+/*
 fn main() {
     let listener = TcpListener::bind("0.0.0.0:80").unwrap();
     fs::create_dir_all("videos").unwrap();
@@ -13,40 +88,16 @@ fn main() {
             let mut stream = stream.unwrap();
             let mut request: Vec<u8> = Vec::new();
             let mut buf = [0; 4096];
-            let mut start;
-            let mut total = 0;
-            let mut continues = true;
-            let mut looks_for = "".to_string();
-            let mut host = "".to_string();
-            while continues {
-                if request.len() > 31 {
-                    start = request.len() - 31;
-                } else {
-                    start = request.len();
+            while stream.read(&mut buf).unwrap() == 4096 {
+                for i in buf {
+                    request.push(i);
                 }
-                let len = stream.read(&mut buf).unwrap();
-                request.extend_from_slice(&buf[..len]);
-                if start == 0 {
-                    for i in String::from_utf8_lossy(&buf).to_string().lines() {
-                        if i.starts_with("Content-Type") {
-                            match i.split("boundary=").nth(1) {
-                                Some(x) => {
-                                    looks_for =
-                                        format!("{}", x[25..].to_string()).trim().to_string()
-                                }
-                                None => {}
-                            }
-                        } else if i.starts_with("Host: ") {
-                            host = i[6..].to_string();
-                        }
-                    }
-                }
-                let returns = if_contains(request.clone(), start, total, looks_for.clone());
-                continues = !returns.0;
-                total = returns.1;
             }
-            let response: String = String::from_utf8_lossy(&request).to_string();
-            if response.starts_with("POST") {
+            for i in buf {
+                request.push(i);
+            }
+            let response: String = String::from_utf8_lossy(&request[..4]).to_string();
+            if response == "POST" {
                 for _ in 0..response
                     .split("\n")
                     .nth(response.split("\n").count() - 2)
@@ -230,52 +281,4 @@ fn main() {
         });
     }
 }
-
-fn if_contains(request: Vec<u8>, start: usize, total: usize, looks_for: String) -> (bool, usize) {
-    let mut index = start;
-    let mut post = total;
-    let mut length = looks_for.len();
-    if looks_for.len() < 3 {
-        length = 4;
-    }
-    let mut looks = vec![0; length];
-    while index < request.len() {
-        if index == 5
-            && &[
-                looks[length - 4],
-                looks[length - 3],
-                looks[length - 2],
-                looks[length - 1],
-            ] == b"POST"
-        {
-            post = 1;
-        }
-        for i in 0..length {
-            if index >= length - i {
-                looks[i] = request[index - (length - i)];
-            }
-        }
-        index += 1;
-        if (&[
-            looks[length - 4],
-            looks[length - 3],
-            looks[length - 2],
-            looks[length - 1],
-        ] == b"Host"
-            && post == 0)
-            || (post > 1 && index > 4096 && &looks == looks_for.as_bytes())
-        {
-            return (true, post);
-        } else if &[
-            looks[length - 4],
-            looks[length - 3],
-            looks[length - 2],
-            looks[length - 1],
-        ] == b"Host"
-            || (post > 0 && &looks == looks_for.as_bytes())
-        {
-            post += 1;
-        }
-    }
-    return (false, post);
-}
+*/
