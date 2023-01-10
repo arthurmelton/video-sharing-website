@@ -9,20 +9,15 @@
 
 ```sh
 git clone https://github.com/AMTitan/video-sharing-website.git
-cd video-charing-website
+cd video-sharing-website
 cargo run --release
 ```
 
-if it says os message you will have to run
-
-```sh
-cargo build --release
-```
-then as root or as administrator you will want to run `.//target//release//vidoe-sharing-website`
+the program will run on port 8000
 
 ## Edit
 
-If you want to edit how the website looks you can just change the `.html` pages.
+If you want to edit how the website looks you can just change the `.html` pages in `www`.
 
 404.html - 404 page  
 index.html - home/landing page  
