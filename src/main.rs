@@ -32,7 +32,7 @@ async fn video(path: &str, host: &Host<'_>) -> Option<(ContentType, String)> {
         ContentType::HTML,
         contents
             .replace("$video_id", path)
-            .replace("$host", &host.domain().to_string()),
+            .replace("$host", host.domain().as_ref()),
     ))
 }
 
